@@ -5,6 +5,7 @@ using namespace Eigen;
 ros::Publisher pub_odometry, pub_latest_odometry;
 ros::Publisher pub_path, pub_relo_path;
 ros::Publisher pub_point_cloud, pub_margin_cloud;
+ros::Publisher pub_point_cloud2; // to scan
 ros::Publisher pub_key_poses;
 ros::Publisher pub_relo_relative_pose;
 ros::Publisher pub_camera_pose;
@@ -29,6 +30,8 @@ void registerPub(ros::NodeHandle &n)
     pub_relo_path = n.advertise<nav_msgs::Path>("relocalization_path", 1000);
     pub_odometry = n.advertise<nav_msgs::Odometry>("odometry", 1000);
     pub_point_cloud = n.advertise<sensor_msgs::PointCloud>("point_cloud", 1000);
+    // to scan
+    pub_point_cloud2 = n.advertise<sensor_msgs::PointCloud2>("point_cloud2",1000);
     pub_margin_cloud = n.advertise<sensor_msgs::PointCloud>("history_cloud", 1000);
     pub_key_poses = n.advertise<visualization_msgs::Marker>("key_poses", 1000);
     pub_camera_pose = n.advertise<nav_msgs::Odometry>("camera_pose", 1000);
@@ -39,7 +42,7 @@ void registerPub(ros::NodeHandle &n)
     pub_relo_relative_pose=  n.advertise<nav_msgs::Odometry>("relo_relative_pose", 1000);
 
     //to  sub grid2d
-    pub_kf_mp_sub = n.advertise<geometry_msgs::PoseArray>("kf_and_mps",1000);
+    //pub_kf_mp_sub = n.advertise<geometry_msgs::PoseArray>("kf_and_mps",1000);
 
     cameraposevisual.setScale(1);
     cameraposevisual.setLineWidth(0.05);
@@ -248,6 +251,10 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
     point_cloud.header = header;
     loop_point_cloud.header = header;
 
+    // to scan
+    sensor_msgs::PointCloud2 point_cloud2;
+    point_cloud2.header = header;
+
 
     for (auto &it_per_id : estimator.f_manager.feature)
     {
@@ -266,9 +273,14 @@ void pubPointCloud(const Estimator &estimator, const std_msgs::Header &header)
         p.y = w_pts_i(1);
         p.z = w_pts_i(2);
         point_cloud.points.push_back(p);
-    }
-    pub_point_cloud.publish(point_cloud);
+        
 
+    }
+    
+    pub_point_cloud.publish(point_cloud);
+    // to scan
+    convertPointCloudToPointCloud2(point_cloud,point_cloud2);
+    pub_point_cloud2.publish(point_cloud2);
 
     // pub margined potin
     sensor_msgs::PointCloud margin_cloud;
@@ -380,14 +392,14 @@ void pubKeyframe(const Estimator &estimator)
         pub_keyframe_pose.publish(odometry);
 
         // to sub
-        camera_pose.position.x =  P.x();
-        camera_pose.position.y =  P.y();
-        camera_pose.position.z =  P.z();
-        camera_pose.orientation.x = R.x();
-		camera_pose.orientation.y = R.y();
-		camera_pose.orientation.z = R.z();
-		camera_pose.orientation.w = R.w();
-		pt_array.poses.push_back(camera_pose);
+        // camera_pose.position.x =  P.x();
+        // camera_pose.position.y =  P.y();
+        // camera_pose.position.z =  P.z();
+        // camera_pose.orientation.x = R.x();
+		// camera_pose.orientation.y = R.y();
+		// camera_pose.orientation.z = R.z();
+		// camera_pose.orientation.w = R.w();
+		// pt_array.poses.push_back(camera_pose);
         // end sub
 
         sensor_msgs::PointCloud point_cloud;
@@ -409,11 +421,11 @@ void pubKeyframe(const Estimator &estimator)
                 point_cloud.points.push_back(p);
 
                 // to sub 
-        		geometry_msgs::Pose curr_pt; 
-                curr_pt.position.x = w_pts_i(0);
-			    curr_pt.position.y = w_pts_i(1);
-			    curr_pt.position.z = w_pts_i(2);
-			    pt_array.poses.push_back(curr_pt);
+        		// geometry_msgs::Pose curr_pt; 
+                // curr_pt.position.x = w_pts_i(0);
+			    // curr_pt.position.y = w_pts_i(1);
+			    // curr_pt.position.z = w_pts_i(2);
+			    // pt_array.poses.push_back(curr_pt);
                 //end sub
 
                 int imu_j = WINDOW_SIZE - 2 - it_per_id.start_frame;
@@ -430,9 +442,9 @@ void pubKeyframe(const Estimator &estimator)
         pub_keyframe_point.publish(point_cloud);
 
         // to sub
-        pt_array.header.frame_id = "world";
-        pt_array.header =  estimator.Headers[WINDOW_SIZE - 2];
-		pub_kf_mp_sub.publish(pt_array);
+        // pt_array.header.frame_id = "world";
+        // pt_array.header =  estimator.Headers[WINDOW_SIZE - 2];
+		// pub_kf_mp_sub.publish(pt_array);
         
     }
 }
